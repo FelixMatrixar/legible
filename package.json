@@ -1,0 +1,28 @@
+{
+  "name": "legible",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "packages/*",
+    "services/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "typecheck:dashboard": "tsc -p apps/dashboard/tsconfig.json --noEmit",
+    "selfcheck": "tsx scripts/selfcheck.ts",
+    "smoke:kafka": "tsx scripts/kafka-smoke.ts",
+    "all": "tsx services/all/src/index.ts",
+    "api": "tsx watch services/api/src/index.ts",
+    "worker:structure": "tsx watch services/structure-audit/src/index.ts",
+    "worker:agent": "tsx watch services/agent-nav/src/index.ts",
+    "worker:scorer": "tsx watch services/scorer/src/index.ts",
+    "dashboard": "npm -w apps/dashboard run dev"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  }
+}
