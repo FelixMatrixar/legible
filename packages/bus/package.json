@@ -1,0 +1,13 @@
+{
+  "name": "@legible/bus",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@legible/shared": "*",
+    "kafkajs": "^2.2.4"
+  }
+}
