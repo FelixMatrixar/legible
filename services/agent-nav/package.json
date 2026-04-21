@@ -1,0 +1,23 @@
+{
+  "name": "@legible/agent-nav",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "start": "tsx src/index.ts"
+  },
+  "dependencies": {
+    "@langchain/core": "^0.3.19",
+    "@langchain/langgraph": "^0.2.20",
+    "@legible/bus": "*",
+    "@legible/db": "*",
+    "@legible/gemini": "*",
+    "@legible/shared": "*",
+    "dotenv": "^16.4.5",
+    "playwright": "^1.49.0"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.2"
+  }
+}
