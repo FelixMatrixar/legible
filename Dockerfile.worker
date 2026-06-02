@@ -1,0 +1,14 @@
+# Worker image with real browser binaries baked in (structure-audit,
+# agent-nav, scorer). The service to run is chosen by the compose `command`.
+FROM mcr.microsoft.com/playwright:v1.49.0-jammy
+
+WORKDIR /app
+
+COPY package.json package-lock.json ./
+COPY packages ./packages
+COPY services ./services
+COPY apps/dashboard/package.json ./apps/dashboard/package.json
+
+RUN npm ci --omit=optional
+
+CMD ["npx", "tsx", "services/structure-audit/src/index.ts"]

@@ -1,0 +1,15 @@
+# API + WebSocket relay — no browser needed.
+FROM node:22-slim
+
+WORKDIR /app
+ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
+
+COPY package.json package-lock.json ./
+COPY packages ./packages
+COPY services ./services
+COPY apps/dashboard/package.json ./apps/dashboard/package.json
+
+RUN npm ci --omit=optional
+
+EXPOSE 8080
+CMD ["npx", "tsx", "services/api/src/index.ts"]
