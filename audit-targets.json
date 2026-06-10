@@ -1,0 +1,22 @@
+{
+  "environment": "staging",
+  "pages": [
+    {
+      "url": "https://staging.example.com/",
+      "goals": [
+        { "goal": "find and click the primary call-to-action", "primary": true },
+        { "goal": "locate the pricing" }
+      ]
+    },
+    {
+      "url": "https://staging.example.com/contact",
+      "goals": [
+        {
+          "goal": "complete the contact form",
+          "primary": true,
+          "teardownGoal": "delete the contact submission just created, if a way to do so is visible"
+        }
+      ]
+    }
+  ]
+}

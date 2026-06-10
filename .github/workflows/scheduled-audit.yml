@@ -1,0 +1,32 @@
+name: scheduled-audit
+
+on:
+  schedule:
+    # Daily at 06:00 UTC. Add a `workflow_run`/deploy trigger for post-deploy audits.
+    - cron: "0 6 * * *"
+  workflow_dispatch:
+    inputs:
+      batch_name:
+        description: "Batch name"
+        default: "scheduled audit"
+
+jobs:
+  submit-batch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Submit audit batch
+        env:
+          API_URL: ${{ secrets.LEGIBLE_API_URL }}
+          API_KEY: ${{ secrets.LEGIBLE_API_KEY }}
+          BATCH_NAME: ${{ github.event.inputs.batch_name || 'scheduled audit' }}
+        run: |
+          payload=$(jq -n \
+            --arg name "$BATCH_NAME ($(date -u +%F))" \
+            --slurpfile targets audit-targets.json \
+            '{name: $name} + $targets[0]')
+          curl --fail-with-body -sS -X POST "$API_URL/api/batches" \
+            -H "Content-Type: application/json" \
+            -H "X-API-Key: $API_KEY" \
+            -d "$payload"
