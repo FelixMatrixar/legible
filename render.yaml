@@ -1,0 +1,92 @@
+# Render Blueprint — FREE-TIER layout: one Web Service running api + all
+# three workers in a single process (services/all), plus the static
+# dashboard. Render only gives free compute to Web Services (background
+# workers are paid), and the ~750 free instance-hours/month cover exactly
+# one always-on service — this layout fits inside that.
+#
+# Setup: push to GitHub → Render → New → Blueprint → pick the repo.
+# Fill the `sync: false` secrets in the Render dashboard after first deploy.
+#
+# Free instances sleep after ~15 min without inbound HTTP —
+# .github/workflows/keepalive.yml pings /api/health every 10 min to prevent
+# mid-batch naps. When audits outgrow 512MB (Chromium OOM restarts in the
+# logs), switch to render.scaled.yaml: split services with paid workers.
+
+envVarGroups:
+  - name: legible-shared
+    envVars:
+      - key: GEMINI_API_KEY_1
+        sync: false
+      - key: GEMINI_API_KEY_2
+        sync: false
+      - key: GEMINI_MODEL
+        value: gemini-3.1-flash-lite
+      - key: GEMINI_MAX_RPM_PER_KEY
+        value: "10"
+      # Kafka backbone — Render can't host a broker; use Redpanda Serverless
+      # or Confluent Cloud and paste the bootstrap URL + SASL creds here.
+      - key: BUS_DRIVER
+        value: kafka
+      - key: KAFKA_BROKERS
+        sync: false
+      - key: KAFKA_USERNAME
+        sync: false
+      - key: KAFKA_PASSWORD
+        sync: false
+      - key: KAFKA_SASL_MECHANISM
+        value: scram-sha-256
+      - key: KAFKA_SSL
+        value: "true"
+      # Upstash Redis: durable result store + live dashboard state.
+      - key: UPSTASH_REDIS_REST_URL
+        sync: false
+      - key: UPSTASH_REDIS_REST_TOKEN
+        sync: false
+      - key: BUS_POLL_MS
+        value: "5000"
+      - key: MAX_NAV_STEPS
+        value: "8"
+      - key: NAV_GOAL_TIMEOUT_MS
+        value: "180000"
+
+services:
+  - type: web
+    name: legible
+    runtime: docker
+    dockerfilePath: ./Dockerfile.worker # worker image = Chromium baked in
+    dockerContext: .
+    dockerCommand: npx tsx services/all/src/index.ts
+    plan: free
+    healthCheckPath: /api/health
+    envVarGroups:
+      - legible-shared
+    envVars:
+      - key: INTERNAL_API_KEY
+        sync: false
+      - key: WEBHOOK_URL
+        sync: false
+      # The dashboard's public URL (CORS allowlist), e.g.
+      # https://legible-dashboard.onrender.com
+      - key: DASHBOARD_ORIGIN
+        sync: false
+      - key: SUBMIT_RATE_LIMIT_PER_MIN
+        value: "30"
+      - key: WS_TAIL_MS
+        value: "2000"
+
+  - type: web
+    name: legible-dashboard
+    runtime: static
+    rootDir: apps/dashboard
+    buildCommand: npm install && npm run build
+    staticPublishPath: dist
+    plan: free
+    envVars:
+      # The API's public URL, e.g. https://legible.onrender.com — Vite bakes
+      # it in at build time, so redeploy the dashboard after setting it.
+      - key: VITE_API_URL
+        sync: false
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
