@@ -27,6 +27,13 @@ export function generateFindings(
         message: `Agent got stuck on '${g.goal}': the same action produced no state change twice in a row.`,
         evidence: { stepsTaken: g.stepsTaken, history: g.history },
       });
+    } else if (g.outcome === "error") {
+      findings.push({
+        templateId: "AGENT_GOAL_ERROR",
+        severity: "major",
+        message: `Navigation audit for '${g.goal}' errored before completing — result is inconclusive, not a pass.`,
+        evidence: { stepsTaken: g.stepsTaken, history: g.history },
+      });
     } else if (g.outcome === "succeeded" && g.perceptionModeAtEnd === "visual-fallback") {
       findings.push({
         templateId: g.primary ? "VISUAL_FALLBACK_ON_PRIMARY" : "VISUAL_FALLBACK",

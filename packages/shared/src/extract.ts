@@ -5,6 +5,15 @@
  * serializes the function source and runs it inside the page.
  */
 
+/**
+ * tsx/esbuild wraps named functions with a `__name(...)` helper that lives
+ * in module scope — outside what Playwright serializes — so evaluating
+ * extractPageFacts in the browser throws "__name is not defined" unless the
+ * page defines it first. Run this via page.evaluate() before extracting.
+ */
+export const ESBUILD_NAME_SHIM =
+  "window.__name = window.__name || ((target, value) => target);";
+
 export interface ExtractedElement {
   ref: string;
   role: string;

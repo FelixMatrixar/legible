@@ -1,4 +1,4 @@
-import { extractPageFacts, type ExtractedElement } from "@legible/shared";
+import { ESBUILD_NAME_SHIM, extractPageFacts, type ExtractedElement } from "@legible/shared";
 import type { Page } from "playwright";
 
 /** The function-calling surface from spec §1.5, implemented over Playwright. */
@@ -16,6 +16,7 @@ export type NavAction =
   | { type: "scroll"; direction: "up" | "down" };
 
 export async function listInteractiveElements(page: Page): Promise<PerceptionSnapshot> {
+  await page.evaluate(ESBUILD_NAME_SHIM);
   const facts = await page.evaluate(extractPageFacts, true);
   return { url: facts.url, title: facts.title, elements: facts.interactive };
 }

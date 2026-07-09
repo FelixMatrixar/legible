@@ -1,4 +1,5 @@
 import {
+  ESBUILD_NAME_SHIM,
   extractPageFacts,
   type HeadingSkip,
   type PageFacts,
@@ -25,6 +26,7 @@ export async function auditStructure(browser: Browser, url: string): Promise<Str
     await page.goto(url, { waitUntil: "domcontentloaded", timeout: NAV_TIMEOUT_MS });
     // networkidle is best-effort: analytics-heavy pages never go idle.
     await page.waitForLoadState("networkidle", { timeout: 10_000 }).catch(() => {});
+    await page.evaluate(ESBUILD_NAME_SHIM);
     const facts = await page.evaluate(extractPageFacts, false);
     const rawHtml = await rawPromise;
     return buildSignals(facts, rawHtml);
