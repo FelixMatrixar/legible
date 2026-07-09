@@ -30,10 +30,22 @@ export async function getVisibleText(page: Page): Promise<string> {
   return page.evaluate(() => document.body?.innerText ?? "");
 }
 
+// Playwright waits for an element to be stable (not animating) before acting.
+// On animated sites — and slow/small hosts where animations settle later —
+// 5s is too tight; 10s default, tunable via env.
+const ACTION_TIMEOUT_MS = Number(process.env.NAV_ACTION_TIMEOUT_MS ?? 10_000);
+
 export async function executeAction(page: Page, action: NavAction): Promise<void> {
   switch (action.type) {
     case "click":
-      await page.click(`[data-legible-ref="${action.ref}"]`, { timeout: 5000 });
+      try {
+        await page.click(`[data-legible-ref="${action.ref}"]`, { timeout: ACTION_TIMEOUT_MS });
+      } catch {
+        // Element found but not settling (perpetual animation / overlay).
+        // A forced click skips the stability wait — the agent still located
+        // the element by accessible name, which is what the audit measures.
+        await page.click(`[data-legible-ref="${action.ref}"]`, { timeout: 3000, force: true });
+      }
       break;
     case "clickAt":
       await page.mouse.click(action.x, action.y);
@@ -41,9 +53,9 @@ export async function executeAction(page: Page, action: NavAction): Promise<void
     case "type": {
       const locator = page.locator(`[data-legible-ref="${action.ref}"]`);
       try {
-        await locator.fill(action.text, { timeout: 5000 });
+        await locator.fill(action.text, { timeout: ACTION_TIMEOUT_MS });
       } catch {
-        await locator.click({ timeout: 5000 });
+        await locator.click({ timeout: ACTION_TIMEOUT_MS, force: true });
         await page.keyboard.type(action.text);
       }
       break;

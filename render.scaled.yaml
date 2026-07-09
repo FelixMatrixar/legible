@@ -39,6 +39,8 @@ envVarGroups:
         value: "8"
       - key: NAV_GOAL_TIMEOUT_MS
         value: "180000"
+      - key: NAV_ACTION_TIMEOUT_MS
+        value: "10000"
 
 services:
   - type: web
