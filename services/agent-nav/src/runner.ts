@@ -12,6 +12,13 @@ import { buildNavGraph, type NavStateType } from "./graph";
 const MAX_STEPS = Number(process.env.MAX_NAV_STEPS ?? 8);
 const GOAL_TIMEOUT_MS = Number(process.env.NAV_GOAL_TIMEOUT_MS ?? 180_000);
 
+// LangGraph counts each node AND each conditional-edge resolution as a
+// super-step (~6 per Perceive→Plan→Act→Verify loop), so the ceiling must
+// clear MAX_STEPS × ~6 with headroom. Otherwise LangGraph aborts before the
+// graph's own "step budget exhausted" logic fires — losing the step trace
+// and reporting an opaque recursion error instead of a clean "failed".
+const RECURSION_LIMIT = MAX_STEPS * 8 + 20;
+
 export async function runGoalsForPage(
   browser: Browser,
   llm: LlmClient,
@@ -74,7 +81,7 @@ async function runSingleGoal(
 
     const graph = buildNavGraph({ page, llm, maxSteps: MAX_STEPS });
     const final = await withTimeout(
-      graph.invoke({ goal: spec.goal }, { recursionLimit: MAX_STEPS * 4 + 10 }) as Promise<NavStateType>,
+      graph.invoke({ goal: spec.goal }, { recursionLimit: RECURSION_LIMIT }) as Promise<NavStateType>,
       GOAL_TIMEOUT_MS,
       `goal timed out after ${GOAL_TIMEOUT_MS}ms`
     );
@@ -93,7 +100,7 @@ async function runSingleGoal(
         const teardown = await withTimeout(
           teardownGraph.invoke(
             { goal: spec.teardownGoal },
-            { recursionLimit: MAX_STEPS * 4 + 10 }
+            { recursionLimit: RECURSION_LIMIT }
           ) as Promise<NavStateType>,
           GOAL_TIMEOUT_MS,
           "teardown timed out"
