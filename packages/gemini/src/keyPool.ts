@@ -46,6 +46,12 @@ export class GeminiKeyPool {
     return this.keys[index];
   }
 
+  /** Skips the rest of the current key's window: the next call uses the
+   *  next key. Used when a key is rejected (e.g. Gemini 403). */
+  switchKey(): void {
+    this.callCount = (Math.floor(this.callCount / CALLS_PER_KEY) + 1) * CALLS_PER_KEY;
+  }
+
   /**
    * Rate-limited next(): if the scheduled key has already served
    * GEMINI_MAX_RPM_PER_KEY calls in the last 60s, waits until it is under

@@ -53,6 +53,13 @@ export class GeminiClient {
           headers: { "Content-Type": "application/json", "x-goog-api-key": key },
           body: JSON.stringify(body),
         });
+        if (res.status === 403) {
+          // Key rejected (e.g. its project is blocked) — switch to the next
+          // key in the pool and retry.
+          lastError = new Error(`Gemini 403: ${await res.text()}`);
+          this.pool.switchKey();
+          continue;
+        }
         if (res.status === 429 || res.status >= 500) {
           lastError = new Error(`Gemini ${res.status}: ${await res.text()}`);
           await sleep(1000 * (attempt + 1));

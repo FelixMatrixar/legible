@@ -141,6 +141,16 @@ function check(name: string, condition: boolean, detail?: unknown): void {
   check("aria coverage is 1 for fully named elements", signals.aria.coverage === 1);
 }
 
+// ── 5b. switchKey() jumps to the next key's window ────────────────────────
+{
+  const pool = new GeminiKeyPool({ GEMINI_API_KEY_1: "k1", GEMINI_API_KEY_2: "k2" });
+  check("first call uses key 1", pool.next() === "k1");
+  pool.switchKey();
+  const afterSwitch = Array.from({ length: 5 }, () => pool.next());
+  check("after switch, key 2 serves its full window", afterSwitch.every((k) => k === "k2"), afterSwitch);
+  check("rotation then wraps back to key 1", pool.next() === "k1");
+}
+
 // ── 6. Throttled acquire() preserves the 5-per-key rotation order ─────────
 {
   const pool = new GeminiKeyPool(
