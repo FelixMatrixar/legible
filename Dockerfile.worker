@@ -1,6 +1,8 @@
 # Worker image with real browser binaries baked in (structure-audit,
 # agent-nav, scorer). The service to run is chosen by the compose `command`.
-FROM mcr.microsoft.com/playwright:v1.49.0-jammy
+# The image tag MUST match the pinned playwright version in the service
+# package.jsons — a mismatch means "Executable doesn't exist" at runtime.
+FROM mcr.microsoft.com/playwright:v1.61.1-jammy
 
 WORKDIR /app
 
