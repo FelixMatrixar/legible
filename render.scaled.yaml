@@ -52,9 +52,8 @@ services:
     dockerContext: .
     plan: free
     healthCheckPath: /api/health
-    envVarGroups:
-      - legible-shared
     envVars:
+      - fromGroup: legible-shared
       - key: INTERNAL_API_KEY
         sync: false
       - key: WEBHOOK_URL
@@ -73,8 +72,8 @@ services:
     dockerContext: .
     dockerCommand: npx tsx services/structure-audit/src/index.ts
     plan: starter
-    envVarGroups:
-      - legible-shared
+    envVars:
+      - fromGroup: legible-shared
 
   - type: worker
     name: legible-agent-nav
@@ -83,8 +82,8 @@ services:
     dockerContext: .
     dockerCommand: npx tsx services/agent-nav/src/index.ts
     plan: starter
-    envVarGroups:
-      - legible-shared
+    envVars:
+      - fromGroup: legible-shared
 
   - type: worker
     name: legible-scorer
@@ -93,9 +92,8 @@ services:
     dockerContext: .
     dockerCommand: npx tsx services/scorer/src/index.ts
     plan: starter
-    envVarGroups:
-      - legible-shared
     envVars:
+      - fromGroup: legible-shared
       - key: WEBHOOK_URL
         sync: false
 

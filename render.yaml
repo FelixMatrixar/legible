@@ -58,9 +58,8 @@ services:
     dockerCommand: npx tsx services/all/src/index.ts
     plan: free
     healthCheckPath: /api/health
-    envVarGroups:
-      - legible-shared
     envVars:
+      - fromGroup: legible-shared
       - key: INTERNAL_API_KEY
         sync: false
       - key: WEBHOOK_URL
