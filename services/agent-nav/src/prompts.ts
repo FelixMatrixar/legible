@@ -14,22 +14,26 @@ Rules:
 - If every plausible candidate has been tried and failed, respond status "stuck".
 - Respond with exactly one action per turn.`;
 
+// JSON Schema (OpenRouter/OpenAI structured-output format). `action.type` is
+// required within action, so a model can't return an action with no verb —
+// the failure mode that broke weak models under loose JSON mode.
 export const PLAN_SCHEMA = {
-  type: "OBJECT",
+  type: "object",
   properties: {
-    status: { type: "STRING", enum: ["act", "goal-satisfied", "stuck", "need-screenshot"] },
+    status: { type: "string", enum: ["act", "goal-satisfied", "stuck", "need-screenshot"] },
     action: {
-      type: "OBJECT",
+      type: "object",
       properties: {
-        type: { type: "STRING", enum: ["click", "type", "scroll", "clickAt"] },
-        ref: { type: "STRING" },
-        text: { type: "STRING" },
-        direction: { type: "STRING", enum: ["up", "down"] },
-        x: { type: "NUMBER" },
-        y: { type: "NUMBER" },
+        type: { type: "string", enum: ["click", "type", "scroll", "clickAt"] },
+        ref: { type: "string" },
+        text: { type: "string" },
+        direction: { type: "string", enum: ["up", "down"] },
+        x: { type: "number" },
+        y: { type: "number" },
       },
+      required: ["type"],
     },
-    reasoning: { type: "STRING" },
+    reasoning: { type: "string" },
   },
   required: ["status", "reasoning"],
 } as const;
@@ -86,10 +90,10 @@ Decide the single next step.`;
 }
 
 export const VERIFY_SCHEMA = {
-  type: "OBJECT",
+  type: "object",
   properties: {
-    goalSatisfied: { type: "BOOLEAN" },
-    rationale: { type: "STRING" },
+    goalSatisfied: { type: "boolean" },
+    rationale: { type: "string" },
   },
   required: ["goalSatisfied", "rationale"],
 } as const;

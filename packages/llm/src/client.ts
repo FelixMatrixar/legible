@@ -30,7 +30,7 @@ type ContentPart =
 export class LlmClient {
   constructor(
     private readonly apiKey = process.env.OPENROUTER_API_KEY,
-    private readonly model = process.env.OPENROUTER_MODEL ?? "google/gemini-2.0-flash-001"
+    private readonly model = process.env.OPENROUTER_MODEL ?? "google/gemini-3.1-flash-lite"
   ) {
     if (!this.apiKey) throw new Error("OPENROUTER_API_KEY must be set");
   }
@@ -45,19 +45,22 @@ export class LlmClient {
 
     const messages: { role: string; content: string | ContentPart[] }[] = [];
     if (opts.system) messages.push({ role: "system", content: opts.system });
-    if (opts.schema) {
-      messages.push({
-        role: "system",
-        content: "Respond with a single valid JSON object and nothing else.",
-      });
-    }
     messages.push({ role: "user", content: userContent });
 
     const body: Record<string, unknown> = {
       model: this.model,
       messages,
       temperature: opts.temperature ?? 0.2,
-      ...(opts.schema ? { response_format: { type: "json_object" } } : {}),
+      // Structured output: the model is constrained to the exact JSON Schema,
+      // so required fields (e.g. an action's `type`) can't be omitted.
+      ...(opts.schema
+        ? {
+            response_format: {
+              type: "json_schema",
+              json_schema: { name: "response", strict: false, schema: opts.schema },
+            },
+          }
+        : {}),
     };
 
     let lastError: Error | null = null;
