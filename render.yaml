@@ -79,7 +79,6 @@ services:
     rootDir: apps/dashboard
     buildCommand: npm install && npm run build
     staticPublishPath: dist
-    plan: free
     envVars:
       # The API's public URL, e.g. https://legible.onrender.com — Vite bakes
       # it in at build time, so redeploy the dashboard after setting it.
