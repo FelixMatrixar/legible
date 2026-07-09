@@ -1,10 +1,21 @@
 import { LiveState, TOPICS, type Bus } from "@legible/bus";
 import { createBatch, getBatch, getPageReport, listBatches } from "@legible/db";
-import { classifyGoal, type PageJob } from "@legible/shared";
+import { classifyGoalWithAI, LlmClient } from "@legible/llm";
+import { classifyGoal, type GoalClassification, type PageJob } from "@legible/shared";
 import { Router } from "express";
 import { z } from "zod";
 import { requireCaller } from "./auth";
 import { rateLimit } from "./rateLimit";
+
+// Lazily created so the API still boots without an LLM key — classification
+// then degrades to the heuristic instead of failing.
+let llmClient: LlmClient | null = null;
+function classifier(goal: string, override?: GoalClassification): Promise<GoalClassification> {
+  if (override) return Promise.resolve(override);
+  if (!process.env.OPENROUTER_API_KEY) return Promise.resolve(classifyGoal({ goal }));
+  llmClient ??= new LlmClient();
+  return classifyGoalWithAI(llmClient, goal);
+}
 
 const goalSchema = z.object({
   goal: z.string().min(3),
@@ -39,20 +50,34 @@ export function buildRoutes(bus: Bus, live: LiveState): Router {
     }
     const input = parsed.data;
 
+    // Classify every goal's intent once, with the LLM (understands meaning,
+    // not keywords). The resolved value is baked into classificationOverride
+    // so the worker reads it directly — classify once, decide consistently.
+    try {
+      for (const page of input.pages) {
+        for (const g of page.goals) {
+          g.classificationOverride = await classifier(g.goal, g.classificationOverride);
+        }
+      }
+    } catch (err) {
+      res.status(502).json({ error: `Goal classification failed: ${err instanceof Error ? err.message : err}` });
+      return;
+    }
+
     // Safety gate (build-order step 4): a goal classified as potentially
     // mutating must never target production. Rejected at submission, not
     // silently skipped at run time, so the operator finds out immediately.
     if (input.environment === "production") {
       const violations = input.pages.flatMap((p) =>
         p.goals
-          .filter((g) => classifyGoal(g) === "mutating")
+          .filter((g) => g.classificationOverride === "mutating")
           .map((g) => ({ url: p.url, goal: g.goal }))
       );
       if (violations.length > 0) {
         res.status(400).json({
           error:
             "Batch targets production but contains potentially-mutating goals. " +
-            "Point these at staging, or mark them classificationOverride:'read-only' only if you are certain.",
+            "Point these at staging, or set classificationOverride:'read-only' only if you are certain.",
           violations,
         });
         return;
@@ -94,6 +119,7 @@ export function buildRoutes(bus: Bus, live: LiveState): Router {
           pageId: p.pageId,
           url: p.url,
           goals: p.goals.map((g) => ({ goal: g.goal, classification: classifyGoal(g) })),
+          // classifyGoal(g) here reads the baked classificationOverride.
         })),
       });
     } catch (err) {

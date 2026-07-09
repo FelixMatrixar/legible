@@ -10,6 +10,7 @@
   "dependencies": {
     "@legible/bus": "*",
     "@legible/db": "*",
+    "@legible/llm": "*",
     "@legible/shared": "*",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",

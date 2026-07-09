@@ -27,8 +27,21 @@ $payload = @{
   pages       = @(@{ url = $Url; goals = $goalObjects })
 } | ConvertTo-Json -Depth 6
 
-$submit = Invoke-RestMethod -Uri "$ApiBase/api/batches" -Method Post -ContentType "application/json" `
-  -Headers @{ "x-api-key" = $key } -Body $payload
+try {
+  $submit = Invoke-RestMethod -Uri "$ApiBase/api/batches" -Method Post -ContentType "application/json" `
+    -Headers @{ "x-api-key" = $key } -Body $payload
+} catch {
+  $resp = $_.Exception.Response
+  if ($resp) {
+    $reader = New-Object System.IO.StreamReader($resp.GetResponseStream())
+    Write-Host "API rejected the batch:" -ForegroundColor Red
+    Write-Host $reader.ReadToEnd()
+    Write-Host ""
+    Write-Host "Tip: goals need a read-only verb (find/locate/...) or they're treated as" -ForegroundColor Yellow
+    Write-Host "     mutating and blocked against production. Rephrase, or use -Environment staging."
+  }
+  return
+}
 $batchId = $submit.batchId
 Write-Host "submitted batch $batchId for $Url"
 
