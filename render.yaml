@@ -15,14 +15,10 @@
 envVarGroups:
   - name: legible-shared
     envVars:
-      - key: GEMINI_API_KEY_1
+      - key: OPENROUTER_API_KEY
         sync: false
-      - key: GEMINI_API_KEY_2
-        sync: false
-      - key: GEMINI_MODEL
-        value: gemini-3.1-flash-lite
-      - key: GEMINI_MAX_RPM_PER_KEY
-        value: "10"
+      - key: OPENROUTER_MODEL
+        value: google/gemini-2.0-flash-001
       # Kafka backbone — Render can't host a broker; use Redpanda Serverless
       # or Confluent Cloud and paste the bootstrap URL + SASL creds here.
       - key: BUS_DRIVER

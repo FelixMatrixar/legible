@@ -1,4 +1,4 @@
-import type { GeminiClient } from "@legible/gemini";
+import type { LlmClient } from "@legible/llm";
 import type { HistoryEntry, PerceptionMode } from "@legible/shared";
 import { Annotation, END, START, StateGraph } from "@langchain/langgraph";
 import type { Page } from "playwright";
@@ -49,12 +49,12 @@ export type NavStateType = typeof NavState.State;
 
 export interface NavGraphDeps {
   page: Page;
-  gemini: GeminiClient;
+  llm: LlmClient;
   maxSteps: number;
 }
 
 export function buildNavGraph(deps: NavGraphDeps) {
-  const { page, gemini, maxSteps } = deps;
+  const { page, llm, maxSteps } = deps;
 
   const perceive = async (): Promise<Partial<NavStateType>> => {
     const snapshot = await listInteractiveElements(page);
@@ -73,7 +73,7 @@ export function buildNavGraph(deps: NavGraphDeps) {
 
     // Attempt 1: accessibility-tree signals only. The screenshot is never
     // captured up front — falling back to it is itself the finding.
-    let response = await gemini.generateJson<PlannerResponse>({
+    let response = await llm.generateJson<PlannerResponse>({
       system: PLANNER_SYSTEM,
       prompt: planPrompt(state.goal, perception, state.history, false),
       schema: PLAN_SCHEMA,
@@ -82,7 +82,7 @@ export function buildNavGraph(deps: NavGraphDeps) {
 
     if (response.status === "need-screenshot") {
       const screenshot = await captureScreenshot(page);
-      response = await gemini.generateJson<PlannerResponse>({
+      response = await llm.generateJson<PlannerResponse>({
         system: PLANNER_SYSTEM,
         prompt: planPrompt(state.goal, perception, state.history, true),
         imageBase64Png: screenshot,
@@ -148,7 +148,7 @@ export function buildNavGraph(deps: NavGraphDeps) {
       result = "no change";
     } else {
       const visibleText = (await getVisibleText(page)).slice(0, 1500);
-      const check = await gemini.generateJson<VerifyResponse>({
+      const check = await llm.generateJson<VerifyResponse>({
         prompt: verifyPrompt({
           goal: state.goal,
           actionTaken: actionLabel,

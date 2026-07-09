@@ -1,4 +1,4 @@
-import { GeminiClient } from "@legible/gemini";
+import { LlmClient } from "@legible/llm";
 import {
   classifyGoal,
   type GoalResult,
@@ -14,7 +14,7 @@ const GOAL_TIMEOUT_MS = Number(process.env.NAV_GOAL_TIMEOUT_MS ?? 180_000);
 
 export async function runGoalsForPage(
   browser: Browser,
-  gemini: GeminiClient,
+  llm: LlmClient,
   job: PageJob
 ): Promise<GoalResult[]> {
   const results: GoalResult[] = [];
@@ -38,7 +38,7 @@ export async function runGoalsForPage(
       continue;
     }
 
-    const result = await runSingleGoal(browser, gemini, job.url, spec, classification);
+    const result = await runSingleGoal(browser, llm, job.url, spec, classification);
     results.push(result);
   }
 
@@ -47,7 +47,7 @@ export async function runGoalsForPage(
 
 async function runSingleGoal(
   browser: Browser,
-  gemini: GeminiClient,
+  llm: LlmClient,
   url: string,
   spec: GoalSpec,
   classification: "read-only" | "mutating"
@@ -72,7 +72,7 @@ async function runSingleGoal(
     await page.goto(url, { waitUntil: "domcontentloaded", timeout: 45_000 });
     await page.waitForLoadState("networkidle", { timeout: 10_000 }).catch(() => {});
 
-    const graph = buildNavGraph({ page, gemini, maxSteps: MAX_STEPS });
+    const graph = buildNavGraph({ page, llm, maxSteps: MAX_STEPS });
     const final = await withTimeout(
       graph.invoke({ goal: spec.goal }, { recursionLimit: MAX_STEPS * 4 + 10 }) as Promise<NavStateType>,
       GOAL_TIMEOUT_MS,
@@ -89,7 +89,7 @@ async function runSingleGoal(
     // even on staging.
     if (base.outcome === "succeeded" && classification === "mutating" && spec.teardownGoal) {
       try {
-        const teardownGraph = buildNavGraph({ page, gemini, maxSteps: MAX_STEPS });
+        const teardownGraph = buildNavGraph({ page, llm, maxSteps: MAX_STEPS });
         const teardown = await withTimeout(
           teardownGraph.invoke(
             { goal: spec.teardownGoal },

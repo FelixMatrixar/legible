@@ -1,9 +1,8 @@
 /**
- * Dependency-free sanity run of the pure logic: key rotation, goal
- * classification, finding generation, scoring, and JS-only detection.
+ * Dependency-free sanity run of the pure logic: goal classification, finding
+ * generation, scoring, and JS-only detection.
  * Run with: npm run selfcheck
  */
-import { GeminiKeyPool, CALLS_PER_KEY } from "../packages/gemini/src/keyPool";
 import { classifyGoal } from "../packages/shared/src/classify";
 import { generateFindings } from "../packages/shared/src/findings";
 import { scorePage } from "../packages/shared/src/scoring";
@@ -21,17 +20,7 @@ function check(name: string, condition: boolean, detail?: unknown): void {
   }
 }
 
-// ── 1. Key pool: every key serves exactly 5 calls before rotating ─────────
-{
-  const pool = new GeminiKeyPool({ GEMINI_API_KEY_1: "k1", GEMINI_API_KEY_2: "k2" });
-  const sequence = Array.from({ length: 15 }, () => pool.next());
-  check("pool discovers 2 keys", pool.size === 2);
-  check(`calls 1-${CALLS_PER_KEY} use key 1`, sequence.slice(0, 5).every((k) => k === "k1"), sequence);
-  check("calls 6-10 use key 2", sequence.slice(5, 10).every((k) => k === "k2"), sequence);
-  check("calls 11-15 wrap to key 1", sequence.slice(10, 15).every((k) => k === "k1"), sequence);
-}
-
-// ── 2. Goal classification ────────────────────────────────────────────────
+// ── 1. Goal classification ────────────────────────────────────────────────
 {
   check("'locate the pricing' is read-only", classifyGoal({ goal: "locate the pricing" }) === "read-only");
   check("'find the contact page' is read-only", classifyGoal({ goal: "find the contact page" }) === "read-only");
@@ -139,33 +128,6 @@ function check(name: string, condition: boolean, detail?: unknown): void {
   check("only the client-side block is flagged", signals.jsOnly.samples.length === 1, signals.jsOnly.samples);
   check("no heading skip for 1→2", signals.headings.skips.length === 0);
   check("aria coverage is 1 for fully named elements", signals.aria.coverage === 1);
-}
-
-// ── 5b. switchKey() jumps to the next key's window ────────────────────────
-{
-  const pool = new GeminiKeyPool({ GEMINI_API_KEY_1: "k1", GEMINI_API_KEY_2: "k2" });
-  check("first call uses key 1", pool.next() === "k1");
-  pool.switchKey();
-  const afterSwitch = Array.from({ length: 5 }, () => pool.next());
-  check("after switch, key 2 serves its full window", afterSwitch.every((k) => k === "k2"), afterSwitch);
-  check("rotation then wraps back to key 1", pool.next() === "k1");
-}
-
-// ── 6. Throttled acquire() preserves the 5-per-key rotation order ─────────
-{
-  const pool = new GeminiKeyPool(
-    { GEMINI_API_KEY_1: "k1", GEMINI_API_KEY_2: "k2" },
-    10_000 // effectively no throttle — this checks ordering, not timing
-  );
-  const sequence: string[] = [];
-  for (let i = 0; i < 12; i++) sequence.push(await pool.acquire());
-  check(
-    "acquire() rotates identically to next()",
-    sequence.slice(0, 5).every((k) => k === "k1") &&
-      sequence.slice(5, 10).every((k) => k === "k2") &&
-      sequence.slice(10).every((k) => k === "k1"),
-    sequence
-  );
 }
 
 if (failures > 0) {

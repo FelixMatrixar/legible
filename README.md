@@ -46,7 +46,7 @@ agent-results  structure-results    ── streams
 | Path | What it is |
 |---|---|
 | `packages/shared` | Types, read-only/mutating goal classifier, rule-based finding engine (§2.2), scoring (§2.3), in-browser extraction shared by both workers |
-| `packages/gemini` | Gemini client. Keys discovered from `GEMINI_API_KEY_1..N`; strict round-robin — **every key serves exactly 5 calls before rotating** |
+| `packages/llm` | OpenRouter chat client (OpenAI-compatible) for the navigation agent — one key, model set via `OPENROUTER_MODEL` |
 | `packages/bus` | Event bus behind one `Bus` interface — Apache Kafka driver (default) + Upstash Redis Streams driver — plus live dashboard state |
 | `packages/db` | Redis-backed result store: batches, scores, findings, per-URL score history — the spec's "lookup by batch/page id" scope, no SQL needed |
 | `services/api` | Express, single-operator X-API-Key auth. Batch submission (with the mutating-goal production gate), reports, WebSocket live tail |
@@ -62,10 +62,11 @@ agent-results  structure-results    ── streams
    npm install
    npx playwright install chromium   # local browser for the workers
    ```
-2. **Env**: copy `.env.example` → `.env` and fill it in. Add as many
-   `GEMINI_API_KEY_N` as you have. `INTERNAL_API_KEY` is the single-operator
-   key: any long random string — the dashboard asks for it once and keeps it
-   in localStorage.
+2. **Env**: copy `.env.example` → `.env` and fill it in. `OPENROUTER_API_KEY`
+   drives the navigation agent; `OPENROUTER_MODEL` picks the model (default is
+   a vision-capable Gemini model so the screenshot fallback works).
+   `INTERNAL_API_KEY` is the single-operator key: any long random string —
+   the dashboard asks for it once and keeps it in localStorage.
 
 ## Run
 
@@ -97,20 +98,18 @@ curl -X POST http://localhost:8080/api/batches \
 
 ## Rate limits
 
-All tunable in `.env`; defaults are sized for Gemini free tier + Upstash pay-as-you-go:
+All tunable in `.env`:
 
 | Knob | Default | Why |
 |---|---|---|
-| `GEMINI_MAX_RPM_PER_KEY` | `10` | Free-tier flash-lite is ~15 RPM/key; 10 leaves burst headroom. The throttle delays calls but never changes the strict 5-calls-per-key rotation. Raise to 100+ on a paid tier. |
 | `BUS_POLL_MS` | `5000` | Idle stream polling costs Upstash commands 24/7. 5s + occasional-only `XAUTOCLAIM` ≈ ~75K commands/day idle vs ~300K at the old 1.5s — at $0.2/100K that's the difference between ~$4.5 and ~$19/month of pure idle spend. |
 | `WS_TAIL_MS` | `2000` | Dashboard live-tail poll; only runs while a client is connected. |
 | `SUBMIT_RATE_LIMIT_PER_MIN` | `30` | Sliding-window cap per caller on `POST /api/batches`. Batch size is separately capped at 500 pages. |
 
 Capacity math for sizing batches: a navigation goal costs at most `2 × MAX_NAV_STEPS + 1`
-Gemini calls (plan + optional screenshot re-plan + verify per step) ≈ 17 worst case,
-~6–8 typical. On the free tier (~1,000 requests/day/key) budget roughly **60 worst-case
-goals per key per day**; every extra `GEMINI_API_KEY_N` adds that linearly. Page
-crawling is polite by construction: each worker processes pages sequentially, so
+OpenRouter calls (plan + optional screenshot re-plan + verify per step) ≈ 17 worst
+case, ~6–8 typical — so mind your OpenRouter credit/rate limits on large batches.
+Page crawling is polite by construction: each worker processes pages sequentially, so
 site concurrency equals the number of worker replicas (2 with the default compose file).
 
 ## Safety model
@@ -162,7 +161,7 @@ workers with the same env layout.
 2. Render → **New → Blueprint** → select the repo. Render reads `render.yaml`
    and proposes all five services.
 3. After the first deploy, fill in the secrets Render left blank (marked
-   `sync: false` in the blueprint): `GEMINI_API_KEY_1`/`_2`,
+   `sync: false` in the blueprint): `OPENROUTER_API_KEY`,
    `KAFKA_BROKERS`/`_USERNAME`/`_PASSWORD` (Render can't host a broker —
    create a free [Redpanda Serverless](https://redpanda.com) cluster or a
    Confluent Cloud basic cluster and paste its bootstrap URL + SASL creds),

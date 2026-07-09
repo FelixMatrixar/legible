@@ -1,7 +1,7 @@
 import "dotenv/config";
 import { createBus, GROUPS, LiveState, TOPICS } from "@legible/bus";
 import { saveAgentResults } from "@legible/db";
-import { GeminiClient } from "@legible/gemini";
+import { LlmClient } from "@legible/llm";
 import type { AgentResultEvent, PageJob } from "@legible/shared";
 import { hostname } from "node:os";
 import { chromium, type Browser } from "playwright";
@@ -9,7 +9,7 @@ import { runGoalsForPage } from "./runner";
 
 const bus = createBus();
 const live = new LiveState();
-const gemini = new GeminiClient();
+const llm = new LlmClient();
 let browser: Browser | null = null;
 
 async function getBrowser(): Promise<Browser> {
@@ -29,7 +29,7 @@ async function handleJob(job: PageJob): Promise<void> {
   const result: AgentResultEvent = { batchId: job.batchId, pageId: job.pageId, url: job.url, goals: [] };
 
   try {
-    result.goals = await runGoalsForPage(await getBrowser(), gemini, job);
+    result.goals = await runGoalsForPage(await getBrowser(), llm, job);
   } catch (err) {
     result.error = err instanceof Error ? err.message : String(err);
     console.error(`[agent-nav] failed for ${job.url}:`, err);
