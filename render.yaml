@@ -7,10 +7,11 @@
 # Setup: push to GitHub → Render → New → Blueprint → pick the repo.
 # Fill the `sync: false` secrets in the Render dashboard after first deploy.
 #
-# Free instances sleep after ~15 min without inbound HTTP —
-# .github/workflows/keepalive.yml pings /api/health every 10 min to prevent
-# mid-batch naps. When audits outgrow 512MB (Chromium OOM restarts in the
-# logs), switch to render.scaled.yaml: split services with paid workers.
+# Free instances sleep after ~15 min without inbound HTTP, then wake on the
+# next request (~30-60s cold start) — fine for on-demand personal use, since
+# nothing here runs unattended on a schedule by default. When audits outgrow
+# 512MB (Chromium OOM restarts in the logs), switch to render.scaled.yaml:
+# split services with paid workers.
 
 envVarGroups:
   - name: legible-shared
