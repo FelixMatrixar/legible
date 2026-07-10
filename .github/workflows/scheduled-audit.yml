@@ -1,9 +1,10 @@
 name: scheduled-audit
 
+# Manual only — run it yourself from the Actions tab when you want a batch.
+# To make it run on a timer again, add:
+#   schedule:
+#     - cron: "0 6 * * *"   # daily 06:00 UTC
 on:
-  schedule:
-    # Daily at 06:00 UTC. Add a `workflow_run`/deploy trigger for post-deploy audits.
-    - cron: "0 6 * * *"
   workflow_dispatch:
     inputs:
       batch_name:
